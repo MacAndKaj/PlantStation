@@ -1,0 +1,26 @@
+{
+    "i2cdev": "/dev/i2c-1",
+    "adc": {
+        "i2c_address": 72,
+        "type": "ADS1115",
+        "registers" : {
+            "Conversion": 0,
+            "Config": 1
+        },
+        "registers_values": {
+            "Config": [131, 131]
+        }
+    },
+    "thermometer": {
+        "i2c_address": 93,
+        "type": "LPS331AP",
+        "registers" : {
+            "CtrlReg1": 32,
+            "WhoAmI": 14
+        },
+        "registers_values" : {
+            "CtrlReg1": [224],
+            "WhoAmI": [187]
+        }
+    }
+}
