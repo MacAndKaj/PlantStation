@@ -1,71 +1,78 @@
-use serde::{Serialize, Deserialize};
-use derive_new::new;
+// Re-export generated protobuf types with compatibility helpers
+use super::{
+    GetStatusReq as ProtoGetStatusReq, GetStatusResp as ProtoGetStatusResp,
+    GetAdcValueReq as ProtoGetAdcValueReq, GetAdcValueResp as ProtoGetAdcValueResp,
+    GetHygrometerStatusReq as ProtoGetHygrometerStatusReq, GetHygrometerStatusResp as ProtoGetHygrometerStatusResp,
+    GetTemperatureReq as ProtoGetTemperatureReq, GetTemperatureResp as ProtoGetTemperatureResp,
+    StatusType as ProtoStatusType,
+};
 
-#[derive(Serialize, Deserialize, Debug)]
-#[repr(u8)]
-pub enum StatusType {
-    Unknown,
-    I2C,
-    ADC
-}
+// Type aliases for main usage
+pub type GetStatusReq = ProtoGetStatusReq;
+pub type GetStatusResp = ProtoGetStatusResp;
+pub type GetAdcValueReq = ProtoGetAdcValueReq;
+pub type GetAdcValueResp = ProtoGetAdcValueResp;
+pub type GetHygrometerStatusReq = ProtoGetHygrometerStatusReq;
+pub type GetHygrometerStatusResp = ProtoGetHygrometerStatusResp;
+pub type GetTemperatureReq = ProtoGetTemperatureReq;
+pub type GetTemperatureResp = ProtoGetTemperatureResp;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct GetStatusReq {
-    status_type: u8,
-}
+// Re-export StatusType enum with compatibility
+pub use super::StatusType;
 
+// Helper trait implementations for backward compatibility
 impl GetStatusReq {
     pub fn new(status_type_arg: StatusType) -> GetStatusReq {
-        GetStatusReq { status_type: status_type_arg as u8 }
+        GetStatusReq { status_type: status_type_arg as u32 }
     }
 
     pub fn get_status(&self) -> StatusType {
         match self.status_type {
-            1 => StatusType::I2C,
-            2 => StatusType::ADC,
+            1 => StatusType::I2c,
+            2 => StatusType::Adc,
             _ => StatusType::Unknown
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, new)]
-pub struct GetStatusResp {
-    pub status: String
-}
-
-
-#[derive(Serialize, Deserialize, Debug, new)]
-pub struct GetAdcValueReq {
-    converted: bool,
-    pub(crate) channel: u8, // mux bitmap 0=0b000, 1=0b001,...., 7=0b111
-}
 impl GetAdcValueReq {
     pub fn is_converted(&self) -> bool {
         self.converted
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, new)]
-pub struct GetAdcValueResp {
-    pub value: u16,
+impl GetStatusResp {
+    pub fn new(status: String) -> GetStatusResp {
+        GetStatusResp { status }
+    }
 }
 
-#[derive(Serialize, Deserialize, Debug, new)]
-pub struct GetHygrometerStatusReq {
-    pub channel: u8, // mux bitmap 0=0b000, 1=0b001,...., 7=0b111
+impl GetAdcValueResp {
+    pub fn new(value: u32) -> GetAdcValueResp {
+        GetAdcValueResp { value }
+    }
 }
 
-#[derive(Serialize, Deserialize, Debug, new)]
-pub struct GetHygrometerStatusResp {
-    pub humidity: u8,
+impl GetHygrometerStatusReq {
+    pub fn new(channel: u32) -> GetHygrometerStatusReq {
+        GetHygrometerStatusReq { channel }
+    }
 }
 
-#[derive(Serialize, Deserialize, Debug, new)]
-pub struct GetTemperatureReq {
-    dummy: u8,
+impl GetHygrometerStatusResp {
+    pub fn new(humidity: u32) -> GetHygrometerStatusResp {
+        GetHygrometerStatusResp { humidity }
+    }
 }
 
-#[derive(Serialize, Deserialize, Debug, new)]
-pub struct GetTemperatureResp {
-    pub temperature: i16,
+impl GetTemperatureReq {
+    pub fn new(dummy: u32) -> GetTemperatureReq {
+        GetTemperatureReq { dummy }
+    }
+}
+
+impl GetTemperatureResp {
+    pub fn new(temperature: i32) -> GetTemperatureResp {
+        GetTemperatureResp { temperature }
+    }
 }

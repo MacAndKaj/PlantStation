@@ -3,7 +3,7 @@ use std::io::Write;
 use std::net::{SocketAddr, UdpSocket};
 use clap::{Parser, arg};
 use String;
-use crate::msg::ps::StatusType;
+use prost::Message;
 
 mod msg;
 
@@ -24,16 +24,18 @@ struct Args {
     ctrl_port: u16,
 }
 
-fn build_get_status_req(status_type: StatusType) -> Vec<u8> {
+fn build_get_status_req(status_type: msg::StatusType) -> Vec<u8> {
     let req = msg::ps::GetStatusReq::new(status_type);
     println!("{:#?}", req);
     let mut ret = vec![msg::MessageId::GetStatusReq as u8];
-    ret.append(bincode::serialize(&req).unwrap().as_mut());
+    let mut payload = Vec::new();
+    req.encode(&mut payload).unwrap();
+    ret.append(&mut payload);
     ret
 }
 
 fn run_status(sock: &UdpSocket) {
-    let encoded = build_get_status_req(msg::ps::StatusType::ADC);
+    let encoded = build_get_status_req(msg::StatusType::I2c);
 
     println!("{:?}", encoded);
     let len = sock.send(encoded.as_slice()).unwrap();
@@ -42,15 +44,17 @@ fn run_status(sock: &UdpSocket) {
     let len = sock.recv(&mut buf).unwrap();
 
     // println!("{:?}", &buf[..len]);
-    let resp: msg::ps::GetStatusResp = bincode::deserialize(&buf[1..len]).unwrap();
+    let resp: msg::ps::GetStatusResp = msg::ps::GetStatusResp::decode(&buf[1..len]).unwrap();
     println!("{:?}", resp);
 
 }
 
 fn run_get_adc_value(sock: &UdpSocket, converted: bool) {
-    let req = msg::ps::GetAdcValueReq::new(converted, 0);
+    let req = msg::ps::GetAdcValueReq { converted, channel: 0 };
     let mut encoded = vec![msg::MessageId::GetAdcValueReq as u8];
-    encoded.append(bincode::serialize(&req).unwrap().as_mut());
+    let mut payload = Vec::new();
+    req.encode(&mut payload).unwrap();
+    encoded.append(&mut payload);
 
     println!("{:?}", encoded);
     let len = sock.send(encoded.as_slice()).unwrap();
@@ -59,14 +63,16 @@ fn run_get_adc_value(sock: &UdpSocket, converted: bool) {
     let len = sock.recv(&mut buf).unwrap();
 
     // println!("{:?}", &buf[..len]);
-    let resp: msg::ps::GetAdcValueResp = bincode::deserialize(&buf[1..len]).unwrap();
+    let resp: msg::ps::GetAdcValueResp = msg::ps::GetAdcValueResp::decode(&buf[1..len]).unwrap();
     println!("{:?}", resp);
 }
 
-fn run_get_higrometer_status(sock: &UdpSocket) -> Result<u8, String> {
-    let req = msg::ps::GetHygrometerStatusReq::new(0);
+fn run_get_higrometer_status(sock: &UdpSocket) -> Result<u32, String> {
+    let req = msg::ps::GetHygrometerStatusReq { channel: 0 };
     let mut encoded = vec![msg::MessageId::GetHygrometerStatusReq as u8];
-    encoded.append(bincode::serialize(&req).unwrap().as_mut());
+    let mut payload = Vec::new();
+    req.encode(&mut payload).unwrap();
+    encoded.append(&mut payload);
 
     println!("{:?}", encoded);
     let len = sock.send(encoded.as_slice()).unwrap();
@@ -81,15 +87,17 @@ fn run_get_higrometer_status(sock: &UdpSocket) -> Result<u8, String> {
         return Err("Error response received".to_string());
     }
     // println!("{:?}", &buf[..len]);
-    let resp: msg::ps::GetHygrometerStatusResp = bincode::deserialize(&buf[1..len]).unwrap();
+    let resp: msg::ps::GetHygrometerStatusResp = msg::ps::GetHygrometerStatusResp::decode(&buf[1..len]).unwrap();
     println!("{:?}", resp);
     Ok(resp.humidity)
 }
 
 fn run_get_temperature(sock: &UdpSocket) {
-    let req = msg::ps::GetTemperatureReq::new(0);
+    let req = msg::ps::GetTemperatureReq { dummy: 0 };
     let mut encoded = vec![msg::MessageId::GetTemperatureReq as u8];
-    encoded.append(bincode::serialize(&req).unwrap().as_mut());
+    let mut payload = Vec::new();
+    req.encode(&mut payload).unwrap();
+    encoded.append(&mut payload);
 
     println!("{:?}", encoded);
     let len = sock.send(encoded.as_slice()).unwrap();
@@ -106,7 +114,7 @@ fn run_get_temperature(sock: &UdpSocket) {
         return;
     }
     // println!("{:?}", &buf[..len]);
-    let resp: msg::ps::GetTemperatureResp = bincode::deserialize(&buf[1..len]).unwrap();
+    let resp: msg::ps::GetTemperatureResp = msg::ps::GetTemperatureResp::decode(&buf[1..len]).unwrap();
     println!("{:?}", resp);
 }
 

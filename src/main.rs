@@ -9,6 +9,7 @@ use String;
 use clap::{Parser, arg};
 use msg::ps::StatusType;
 use crate::app_context::AppContext;
+use prost::Message;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -33,37 +34,37 @@ fn route(msg_id: u8, buffer: &[u8], ps_hw: &mut hw::Hw) -> Vec<u8> {
 
     match msg_id {
         GET_STATUS_MSG_ID => {
-            match bincode::deserialize::<msg::ps::GetStatusReq>(buffer) {
+            match msg::ps::GetStatusReq::decode(buffer) {
                 Ok(msg) => handle_get_status_req(&msg, ps_hw),
                 Err(e) => {
-                    error!("{}", e);
+                    error!("GetStatusReq decode error: {}", e);
                     Vec::new()
                 }
             }
         },
         GET_ADC_VALUE_MSG_ID => {
-            match bincode::deserialize::<msg::ps::GetAdcValueReq>(buffer) {
+            match msg::ps::GetAdcValueReq::decode(buffer) {
                 Ok(msg) => handle_get_adc_value_req(&msg, ps_hw),
                 Err(e) => {
-                    error!("{}", e);
+                    error!("GetAdcValueReq decode error: {}", e);
                     Vec::new()
                 }
             }
         },
         GET_HYGROMETER_STATUS_MSG_ID => {
-            match bincode::deserialize::<msg::ps::GetHygrometerStatusReq>(buffer) {
+            match msg::ps::GetHygrometerStatusReq::decode(buffer) {
                 Ok(msg) => handle_get_higrometer_status_req(&msg, ps_hw),
                 Err(e) => {
-                    error!("GetHygrometerStatusReq error: {}", e);
+                    error!("GetHygrometerStatusReq decode error: {}", e);
                     Vec::new()
                 }
             }
         },
         GET_TEMPERATURE_MSG_ID => {
-            match bincode::deserialize::<msg::ps::GetTemperatureReq>(buffer) {
+            match msg::ps::GetTemperatureReq::decode(buffer) {
                 Ok(_) => handle_get_temperature_req(ps_hw),
                 Err(e) => {
-                    error!("GetTemperatureReq error: {}", e);
+                    error!("GetTemperatureReq decode error: {}", e);
                     Vec::new()
                 }
             }
@@ -79,12 +80,13 @@ fn handle_get_status_req(req: &msg::ps::GetStatusReq, plantstation_hw: &mut hw::
     info!("Handling GetStatusReq: {:?}", req);
     let mut resp = msg::ps::GetStatusResp::new(String::new());
     match req.get_status() {
-        StatusType::I2C => resp.status = plantstation_hw.i2c_status(),
-        StatusType::ADC => resp.status = plantstation_hw.adc_status(),
+        StatusType::I2c => resp.status = plantstation_hw.i2c_status(),
+        StatusType::Adc => resp.status = plantstation_hw.adc_status(),
         StatusType::Unknown => resp.status = String::from("Unknown"),
     }
 
-    let mut out = bincode::serialize(&resp).unwrap();
+    let mut out = Vec::new();
+    resp.encode(&mut out).unwrap();
     out.insert(0, MessageId::GetStatusResp as u8);
     out
 }
@@ -92,16 +94,17 @@ fn handle_get_status_req(req: &msg::ps::GetStatusReq, plantstation_hw: &mut hw::
 fn handle_get_adc_value_req(req: &msg::ps::GetAdcValueReq, plantstation_hw: &mut hw::Hw) -> Vec<u8> {
     info!("Handling GetAdcValueReq: {:?}", req);
     let mut resp = msg::ps::GetAdcValueResp::new(0);
-    match plantstation_hw.read_adc_value(req.is_converted(), req.channel) {
+    match plantstation_hw.read_adc_value(req.is_converted(), req.channel as u8) {
         Ok(val) => {
-            resp.value = val;
+            resp.value = val as u32;
         }
         Err(e) => {
             error!("Error reading ADC value: {}", e);
         }
     }
 
-    let mut out = bincode::serialize(&resp).unwrap();
+    let mut out = Vec::new();
+    resp.encode(&mut out).unwrap();
     out.insert(0, MessageId::GetAdcValueResp as u8);
     out
 }
@@ -110,11 +113,11 @@ fn handle_get_higrometer_status_req(req: &msg::ps::GetHygrometerStatusReq, plant
     info!("Handling GetHygrometerStatusReq: {:?}", req);
     let mut resp = msg::ps::GetHygrometerStatusResp::new(0);
 
-    resp.humidity = plantstation_hw.read_humidity(req.channel).unwrap_or_else(|_| 0);
+    resp.humidity = plantstation_hw.read_humidity(req.channel as u8).unwrap_or_else(|_| 0) as u32;
 
-    let mut out = bincode::serialize(&resp).unwrap_or_else(|_| {
-        error!("Error serializing GetHygrometerStatusResp");
-        Vec::from([0])
+    let mut out = Vec::new();
+    resp.encode(&mut out).unwrap_or_else(|_| {
+        error!("Error encoding GetHygrometerStatusResp");
     });
     out.insert(0, MessageId::GetHygrometerStatusResp as u8);
     out
@@ -123,11 +126,11 @@ fn handle_get_higrometer_status_req(req: &msg::ps::GetHygrometerStatusReq, plant
 fn handle_get_temperature_req(plantstation_hw: &mut hw::Hw) -> Vec<u8> {
     info!("Handling GetTemperatureReq");
     let mut resp = msg::ps::GetTemperatureResp::new(-273);
-    resp.temperature = plantstation_hw.read_temperature().unwrap_or(-273);
+    resp.temperature = plantstation_hw.read_temperature().unwrap_or(-273) as i32;
 
-    let mut out = bincode::serialize(&resp).unwrap_or_else(|_| {
-        info!("Error serializing GetTemperatureResp");
-        Vec::from([0])
+    let mut out = Vec::new();
+    resp.encode(&mut out).unwrap_or_else(|_| {
+        info!("Error encoding GetTemperatureResp");
     });
     out.insert(0, MessageId::GetTemperatureResp as u8);
     out

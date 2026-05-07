@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package plantstation.msg;
+
+// Status types for GetStatusReq
+enum StatusType {
+    STATUS_TYPE_UNKNOWN = 0;
+    STATUS_TYPE_I2C = 1;
+    STATUS_TYPE_ADC = 2;
+}
+
+// Message types for protocol framing
+enum MessageType {
+    MESSAGE_TYPE_UNKNOWN = 0;
+    GET_STATUS_REQ = 1;
+    GET_STATUS_RESP = 2;
+    GET_ADC_VALUE_REQ = 3;
+    GET_ADC_VALUE_RESP = 4;
+    GET_HYGROMETER_STATUS_REQ = 5;
+    GET_HYGROMETER_STATUS_RESP = 6;
+    GET_TEMPERATURE_REQ = 7;
+    GET_TEMPERATURE_RESP = 8;
+}
+
+// GetStatus Request/Response
+message GetStatusReq {
+    uint32 status_type = 1;
+}
+
+message GetStatusResp {
+    string status = 1;
+}
+
+// GetAdcValue Request/Response
+message GetAdcValueReq {
+    bool converted = 1;
+    uint32 channel = 2;  // mux bitmap 0=0b000, 1=0b001,...., 7=0b111
+}
+
+message GetAdcValueResp {
+    uint32 value = 1;
+}
+
+// GetHygrometerStatus Request/Response
+message GetHygrometerStatusReq {
+    uint32 channel = 1;  // mux bitmap 0=0b000, 1=0b001,...., 7=0b111
+}
+
+message GetHygrometerStatusResp {
+    uint32 humidity = 1;
+}
+
+// GetTemperature Request/Response
+message GetTemperatureReq {
+    uint32 dummy = 1;
+}
+
+message GetTemperatureResp {
+    int32 temperature = 1;
+}
+
