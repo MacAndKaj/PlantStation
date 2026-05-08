@@ -13,7 +13,6 @@ import argparse
 from typing import Optional, Tuple
 import time
 
-# Add proto directory to path for imports
 sys.path.insert(0, '/home/admin/RustroverProjects/PlantStation/tools')
 
 try:
@@ -24,7 +23,6 @@ except ImportError as e:
     sys.exit(1)
 
 
-# Message ID constants (must match MessageId enum in Rust)
 MESSAGE_ID = {
     'GetStatusReq': 1,
     'GetStatusResp': 2,
@@ -36,12 +34,106 @@ MESSAGE_ID = {
     'GetTemperatureResp': 8,
 }
 
-# StatusType enum mapping (must match StatusType enum in proto)
 STATUS_TYPE = {
     'UNKNOWN': 0,
     'I2C': 1,
     'ADC': 2,
 }
+
+mux_names = {
+    0: "AIN0/GND",
+    1: "AIN1/GND",
+    2: "AIN2/GND",
+    3: "AIN3/GND",
+    4: "AIN0/AIN1",
+    5: "AIN0/AIN3",
+    6: "AIN1/AIN3",
+    7: "AIN2/AIN3"
+}
+
+pga_names = {
+    0: "±6.144V",
+    1: "±4.096V",
+    2: "±2.048V",
+    3: "±1.024V",
+    4: "±0.512V",
+    5: "±0.256V",
+    6: "±0.256V",
+    7: "±0.256V"
+}
+
+dr_names = {
+    0: "8 SPS",
+    1: "16 SPS",
+    2: "32 SPS",
+    3: "64 SPS",
+    4: "128 SPS",
+    5: "250 SPS",
+    6: "475 SPS",
+    7: "860 SPS"
+}
+
+def process_status(status: str, status_type: str) -> str:
+    if status_type == "I2C":
+        if " | " in status:
+            parts = status.split(" | ")
+            dev_path = parts[0]
+            flags = parts[1:]
+            
+            formatted = f"Device: {dev_path}\n    Functions:\n"
+            for flag in flags:
+                formatted += f"      • {flag}\n"
+            return formatted.rstrip()
+        else:
+            return f"I2C Status: {status}"
+    
+    elif status_type == "ADC":
+        if status.startswith("0x") or status.startswith("0X"):
+            try:
+                hex_str = status
+                config_value = int(hex_str, 16)
+                
+                # Decode ADS1115 Config register bits (16-bit)
+                # Bit 15: OS (Operational Status)
+                # Bits 14-12: MUX (Input Multiplexer Configuration)
+                # Bits 11-9: PGA (Programmable Gain Amplifier)
+                # Bit 8: MODE (Device Operating Mode)
+                # Bits 7-5: DR (Data Rate)
+                # Bit 4: COMP_MODE (Comparator Mode)
+                # Bit 3: COMP_POL (Comparator Polarity)
+                # Bit 2: COMP_LAT (Latching Comparator)
+                # Bits 1-0: COMP_QUE (Comparator Queue)
+                
+                os_bit = (config_value >> 15) & 0x1
+                mux_bits = (config_value >> 12) & 0x7
+                pga_bits = (config_value >> 9) & 0x7
+                mode_bit = (config_value >> 8) & 0x1
+                dr_bits = (config_value >> 5) & 0x7
+                comp_mode = (config_value >> 4) & 0x1
+                comp_pol = (config_value >> 3) & 0x1
+                comp_lat = (config_value >> 2) & 0x1
+                comp_que = (config_value >> 0) & 0x3
+                
+
+                formatted = f"ADC Config Register: {hex_str}\n"
+                formatted += f"    Operational Status (OS): {'Converting' if os_bit else 'Ready'}\n"
+                formatted += f"    Input Multiplexer (MUX): {mux_names.get(mux_bits, 'Unknown')}\n"
+                formatted += f"    Programmable Gain (PGA): {pga_names.get(pga_bits, 'Unknown')}\n"
+                formatted += f"    Operating Mode: {'Single-shot' if mode_bit else 'Continuous'}\n"
+                formatted += f"    Data Rate (DR): {dr_names.get(dr_bits, 'Unknown')}\n"
+                formatted += f"    Comparator Mode: {'Window' if comp_mode else 'Traditional'}\n"
+                formatted += f"    Comparator Polarity: {'Active Low' if comp_pol else 'Active High'}\n"
+                formatted += f"    Comparator Latching: {'Yes' if comp_lat else 'No'}\n"
+                formatted += f"    Comparator Queue: {comp_que} {'assertion' if comp_que < 3 else 'disabled'}"
+                
+                return formatted
+            except (ValueError, IndexError):
+                return f"ADC Error: Invalid hex format '{status}'"
+        else:
+            return f"ADC Error: {status}"
+    
+    else:
+        return status
 
 
 class PlantStationClient:
@@ -128,11 +220,9 @@ class PlantStationClient:
                 req.SerializeToString()
             )
             
-            # Parse response
             resp = ps_pb2.GetStatusResp()
             resp.ParseFromString(resp_payload)
-            
-            print(f"    Status: {resp.status}")
+            print(f"    Status: {process_status(resp.status, status_type)}")
             return resp
             
         except socket.timeout:
