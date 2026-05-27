@@ -2,6 +2,14 @@
 name = "PlantStation"
 path = "src/main.rs"
 
+[[bin]]
+name = "Controller"
+path = "src/controller.rs"
+
+[lib]
+name = "plantstation"
+path = "src/lib.rs"
+
 [package]
 name = "PlantStation"
 version = "0.1.0"

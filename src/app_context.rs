@@ -102,3 +102,114 @@ impl AppContext {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_adc_type_ads1115() {
+        let adc_type = get_adc_type("ADS1115");
+        assert_eq!(adc_type, AdcSupported::ADS1115);
+    }
+
+    #[test]
+    fn test_get_adc_type_lowercase() {
+        let adc_type = get_adc_type("ads1115");
+        assert_eq!(adc_type, AdcSupported::ADS1115);
+    }
+
+    #[test]
+    fn test_get_adc_type_mixed_case() {
+        let adc_type = get_adc_type("AdS1115");
+        assert_eq!(adc_type, AdcSupported::ADS1115);
+    }
+
+    #[test]
+    fn test_get_adc_type_unknown() {
+        let adc_type = get_adc_type("UNKNOWN_ADC");
+        assert_eq!(adc_type, AdcSupported::Unknown);
+    }
+
+    #[test]
+    fn test_get_adc_type_empty() {
+        let adc_type = get_adc_type("");
+        assert_eq!(adc_type, AdcSupported::Unknown);
+    }
+
+    #[test]
+    fn test_get_thermometer_type_lps331ap() {
+        let therm_type = get_thermometer_type("LPS331AP");
+        assert_eq!(therm_type, ThermometerSupported::LPS331AP);
+    }
+
+    #[test]
+    fn test_get_thermometer_type_lowercase() {
+        let therm_type = get_thermometer_type("lps331ap");
+        assert_eq!(therm_type, ThermometerSupported::LPS331AP);
+    }
+
+    #[test]
+    fn test_get_thermometer_type_mixed_case() {
+        let therm_type = get_thermometer_type("Lps331Ap");
+        assert_eq!(therm_type, ThermometerSupported::LPS331AP);
+    }
+
+    #[test]
+    fn test_get_thermometer_type_unknown() {
+        let therm_type = get_thermometer_type("UNKNOWN_SENSOR");
+        assert_eq!(therm_type, ThermometerSupported::Unknown);
+    }
+
+    #[test]
+    fn test_get_thermometer_type_empty() {
+        let therm_type = get_thermometer_type("");
+        assert_eq!(therm_type, ThermometerSupported::Unknown);
+    }
+
+    #[test]
+    fn test_app_context_loading_from_file() {
+        let config_path = "tests/fixtures/test_config.json".to_string();
+        let context = AppContext::new(config_path);
+
+        // Verify I2C device path
+        assert_eq!(context.i2c_dev_path, "/dev/i2c-1");
+
+        // Verify ADC configuration
+        assert_eq!(context.adc_config.adc_address, 72);
+        assert_eq!(context.adc_config.adc_type, AdcSupported::ADS1115);
+        assert!(context.adc_config.registers.contains_key("Conversion"));
+        assert!(context.adc_config.registers.contains_key("Config"));
+        assert_eq!(context.adc_config.registers["Conversion"], 0);
+        assert_eq!(context.adc_config.registers["Config"], 1);
+
+        // Verify thermometer configuration
+        assert_eq!(context.thermometer_config.thermometer_type, ThermometerSupported::LPS331AP);
+        assert_eq!(context.thermometer_config.device_data.address, 93);
+        assert!(context.thermometer_config.device_data.registers.contains_key("CtrlReg1"));
+        assert!(context.thermometer_config.device_data.registers.contains_key("WhoAmI"));
+    }
+
+    #[test]
+    fn test_app_context_adc_registers_values() {
+        let config_path = "tests/fixtures/test_config.json".to_string();
+        let context = AppContext::new(config_path);
+
+        assert!(context.adc_config.registers_values.contains_key("Config"));
+        let config_values = &context.adc_config.registers_values["Config"];
+        assert_eq!(config_values.len(), 2);
+        assert_eq!(config_values[0], 131);
+        assert_eq!(config_values[1], 131);
+    }
+
+    #[test]
+    fn test_app_context_thermometer_registers_values() {
+        let config_path = "tests/fixtures/test_config.json".to_string();
+        let context = AppContext::new(config_path);
+
+        assert!(context.thermometer_config.device_data.registers_values.contains_key("CtrlReg1"));
+        let ctrl_values = &context.thermometer_config.device_data.registers_values["CtrlReg1"];
+        assert_eq!(ctrl_values.len(), 1);
+        assert_eq!(ctrl_values[0], 224);
+    }
+}

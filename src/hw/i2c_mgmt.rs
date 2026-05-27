@@ -84,6 +84,7 @@ impl I2cDevice {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_byte_from_register(
         &mut self,
         slave_address: u16,
