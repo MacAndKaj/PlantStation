@@ -1,10 +1,10 @@
 // Re-export generated protobuf types with compatibility helpers
 use super::{
-    GetStatusReq as ProtoGetStatusReq, GetStatusResp as ProtoGetStatusResp,
     GetAdcValueReq as ProtoGetAdcValueReq, GetAdcValueResp as ProtoGetAdcValueResp,
     GetHygrometerStatusReq as ProtoGetHygrometerStatusReq, GetHygrometerStatusResp as ProtoGetHygrometerStatusResp,
-    GetTemperatureReq as ProtoGetTemperatureReq, GetTemperatureResp as ProtoGetTemperatureResp,
-    StatusType as ProtoStatusType,
+    GetStatusReq as ProtoGetStatusReq, GetStatusResp as ProtoGetStatusResp,
+    GetTemperatureReq as ProtoGetTemperatureReq, GetTemperatureResp as ProtoGetTemperatureResp
+    ,
 };
 
 // Type aliases for main usage
